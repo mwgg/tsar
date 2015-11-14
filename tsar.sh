@@ -81,7 +81,7 @@ while read -r line;do
         continue
     fi
 
-    echo "$line" >> "$LIST_TO_DELETE"
+    echo "$FILE_NAME" >> "$LIST_TO_DELETE"
     ((FILES_TO_DELETE++))
 done < "$LIST"
 
