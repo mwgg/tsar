@@ -16,9 +16,9 @@
 
 ###############################################################################
 # Configuration:
-# If you are using multiple keys, you can specify them here:
-TARSNAP_D="tarsnap --keyfile /root/tarsnap.key" # for deleting
-TARSNAP_R="tarsnap --keyfile /root/tarsnap.read.key" # for getting archive list
+# If you are using multiple keys or other specific options, you can specify them here:
+TARSNAP_R="tarsnap -v --list-archives --keyfile /root/tarsnap.read.key" # for getting archive list
+TARSNAP_D="tarsnap -d --keyfile /root/tarsnap.key" # for deleting, archive names will be appended here
 
 # Number of daily, weekly and monthly backups to keep:
 DAILY=30
@@ -41,6 +41,8 @@ done
 
 LIST=$(mktemp)
 LIST_TO_DELETE=$(mktemp)
+D_OUTPUT=$(mktemp)
+EXIT_CODE=0
 FILES_TO_DELETE=0
 DATE_UNIX=$(date +%s)
 DATE=$(date +%x)
@@ -49,7 +51,7 @@ WEEKLY_DIFF_SEC=$((WEEKLY*604800))
 MONTHLY_DATE_UNIX=$(date +%s -d "$DATE -$MONTHLY months")
 
 if [ "$VERBOSE" -eq 1 ];then echo "Getting the list of archives from Tarsnap";fi
-$TARSNAP_R --list-archives -v > "$LIST"
+$TARSNAP_R > "$LIST"
 
 if [ $? -ne 0 ];then
     cat "$LIST" # tarsnap finished with an error, show it
@@ -87,23 +89,29 @@ done < "$LIST"
 
 if [ "$VERBOSE" -eq 1 ];then echo "Total number of $FILES_TO_DELETE files can be deleted.";fi
 
-CMD="$TARSNAP_D -d"
-
 if [ "$FILES_TO_DELETE" -gt 0 ];then
     while read -r line;do
-        CMD="$CMD -f $(printf "%q" "$line")"
+        TARSNAP_D="$TARSNAP_D -f $(printf "%q" "$line")"
     done < "$LIST_TO_DELETE"
 
     if [ "$DRY" -eq 1 ];then
         echo "The following command would be executed:"
-        echo "$CMD"
+        echo "$TARSNAP_D"
     else
-        $CMD
+        while true
+        do
+            $TARSNAP_D 2>&1 | tee "$D_OUTPUT"
+            EXIT_CODE=$?
+            if ! grep -q "Passphrase is incorrect" "$D_OUTPUT";then
+                break
+            fi
+        done
     fi
 else
     echo "Nothing to do."
 fi
 
 if [ "$VERBOSE" -eq 1 ];then echo "Getting rid of temporary files.";fi
-shred -u "$LIST" "$LIST_TO_DELETE"
+shred -u "$LIST" "$LIST_TO_DELETE" "$D_OUTPUT"
 if [ "$VERBOSE" -eq 1 ];then echo "Done.";fi
+exit $EXIT_CODE
