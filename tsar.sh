@@ -33,12 +33,18 @@ DOM=1 # Day of the month for monthly
 
 ###############################################################################
 
+usage() {
+        echo "usage: ${0##*/} [-dv]" >&2
+        exit 1
+}
+
 DRY=0
 VERBOSE=0
 while getopts "dv" option;do
     case "${option}" in
         d) DRY=1;;
         v) VERBOSE=1;;
+        *) usage;;
     esac
 done
 
