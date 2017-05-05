@@ -41,6 +41,10 @@ usage() {
         exit 1
 }
 
+echo_verbose() {
+    [ "$VERBOSE" -eq 1 ] && echo "$@"
+}
+
 DRY=0
 VERBOSE=0
 while getopts "dv" option;do
@@ -63,7 +67,7 @@ WEEKLY_DIFF_SEC=$((WEEKLY*604800))
 MONTHLY_DATE_UNIX=$(date +%s -d "$DATE -$MONTHLY months")
 if [ $IGNORE -gt 0 ];then MONTHLY_MAX_UNIX=$(date +%s -d "$DATE -$IGNORE months");fi
 
-if [ "$VERBOSE" -eq 1 ];then echo "Getting the list of archives from Tarsnap";fi
+echo_verbose "Getting the list of archives from Tarsnap"
 
 if ! $TARSNAP_R > "$LIST";then
     cat "$LIST" # tarsnap finished with an error, show it
@@ -79,24 +83,16 @@ while read -r line;do
     FILE_UNIX=$(date +%s -d "$FILE_DATE")
     
     if [ $((DATE_UNIX-FILE_UNIX)) -lt "$DAILY_DIFF_SEC" ];then
-        if [ "$VERBOSE" -eq 1 ];then
-            echo "File younger than $DAILY days, not touching: $FILE_NAME"
-        fi
+        echo_verbose "File younger than $DAILY days, not touching: $FILE_NAME"
         continue
     elif [ "$FILE_DOW" -eq "$DOW" ] && [ $((DATE_UNIX-FILE_UNIX)) -lt "$WEEKLY_DIFF_SEC" ];then
-        if [ "$VERBOSE" -eq 1 ];then
-            echo "File younger than $WEEKLY weeks and its DOW is $FILE_DOW, not touching: $FILE_NAME"
-        fi
+        echo_verbose "File younger than $WEEKLY weeks and its DOW is $FILE_DOW, not touching: $FILE_NAME"
         continue
     elif [ "$FILE_DOM" -eq "$DOM" ] && [ "$MONTHLY_DATE_UNIX" -lt "$FILE_UNIX" ];then
-        if [ "$VERBOSE" -eq 1 ];then
-            echo "File younger than $MONTHLY months and its DOM is $FILE_DOM, not touching: $FILE_NAME"
-        fi
+        echo_verbose "File younger than $MONTHLY months and its DOM is $FILE_DOM, not touching: $FILE_NAME"
         continue
 	elif [ $IGNORE -gt 0 ] && [ "$MONTHLY_MAX_UNIX" -gt "$FILE_UNIX" ];then
-		if [ "$VERBOSE" -eq 1 ];then
-			echo "File older than $IGNORE months, not touching: $FILE_NAME"
-		fi
+		echo_verbose "File older than $IGNORE months, not touching: $FILE_NAME"
 		continue
     fi
 
@@ -104,7 +100,7 @@ while read -r line;do
     ((FILES_TO_DELETE++))
 done < "$LIST"
 
-if [ "$VERBOSE" -eq 1 ];then echo "Total number of $FILES_TO_DELETE files can be deleted.";fi
+echo_verbose "Total number of $FILES_TO_DELETE files can be deleted."
 
 if [ "$FILES_TO_DELETE" -gt 0 ];then
     while read -r line;do
@@ -128,7 +124,7 @@ else
     echo "Nothing to do."
 fi
 
-if [ "$VERBOSE" -eq 1 ];then echo "Getting rid of temporary files.";fi
+echo_verbose "Getting rid of temporary files."
 shred -u "$LIST" "$LIST_TO_DELETE" "$D_OUTPUT"
-if [ "$VERBOSE" -eq 1 ];then echo "Done.";fi
+echo_verbose "Done."
 exit $EXIT_CODE
