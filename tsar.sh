@@ -55,9 +55,8 @@ MONTHLY_DATE_UNIX=$(date +%s -d "$DATE -$MONTHLY months")
 if [ $IGNORE ];then MONTHLY_MAX_UNIX=$(date +%s -d "$DATE -$IGNORE months");fi
 
 if [ "$VERBOSE" -eq 1 ];then echo "Getting the list of archives from Tarsnap";fi
-$TARSNAP_R > "$LIST"
 
-if [ $? -ne 0 ];then
+if ! $TARSNAP_R > "$LIST";then
     cat "$LIST" # tarsnap finished with an error, show it
     shred -u "$LIST"
     exit 3
