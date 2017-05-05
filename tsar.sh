@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -e
+set -u
+
 #
 # TarSnap Always Rotating
 # github.com/mwgg/tsar
@@ -25,8 +28,8 @@ DAILY=30
 WEEKLY=12
 MONTHLY=48
 
-# Uncomment to preserve backups older than x months:
-# IGNORE=4
+# Preserve backups older than x months:
+IGNORE=0
 
 DOW=1 # Day of the week for weekly # 0 is Sunday
 DOM=1 # Day of the month for monthly
@@ -58,12 +61,11 @@ DATE=$(date +%D)
 DAILY_DIFF_SEC=$((DAILY*86400))
 WEEKLY_DIFF_SEC=$((WEEKLY*604800))
 MONTHLY_DATE_UNIX=$(date +%s -d "$DATE -$MONTHLY months")
-if [ $IGNORE ];then MONTHLY_MAX_UNIX=$(date +%s -d "$DATE -$IGNORE months");fi
+if [ $IGNORE -gt 0 ];then MONTHLY_MAX_UNIX=$(date +%s -d "$DATE -$IGNORE months");fi
 
 if [ "$VERBOSE" -eq 1 ];then echo "Getting the list of archives from Tarsnap";fi
-$TARSNAP_R > "$LIST"
 
-if [ $? -ne 0 ];then
+if ! $TARSNAP_R > "$LIST";then
     cat "$LIST" # tarsnap finished with an error, show it
     shred -u "$LIST"
     exit 3
@@ -91,7 +93,7 @@ while read -r line;do
             echo "File younger than $MONTHLY months and its DOM is $FILE_DOM, not touching: $FILE_NAME"
         fi
         continue
-	elif [ $IGNORE ] && [ "$MONTHLY_MAX_UNIX" -gt "$FILE_UNIX" ];then
+	elif [ $IGNORE -gt 0 ] && [ "$MONTHLY_MAX_UNIX" -gt "$FILE_UNIX" ];then
 		if [ "$VERBOSE" -eq 1 ];then
 			echo "File older than $IGNORE months, not touching: $FILE_NAME"
 		fi
