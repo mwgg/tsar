@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -e
+set -u
+
 #
 # TarSnap Always Rotating
 # github.com/mwgg/tsar
