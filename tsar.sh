@@ -11,11 +11,11 @@ set -u
 # to create them. Tsar will keep the specified number of daily, weekly and
 # monthly backups, deleting the rest.
 # A few configuration options are available below this section.
-# 
+#
 # Options:
 # -d   Dry run. Will show the delete command instead of running it.
 # -v   Verbose output.
-# 
+#
 
 ###############################################################################
 # Configuration:
@@ -37,8 +37,8 @@ DOM=1 # Day of the month for monthly
 ###############################################################################
 
 usage() {
-        echo "usage: ${0##*/} [-dv]" >&2
-        exit 1
+    echo "usage: ${0##*/} [-dv]" >&2
+    exit 1
 }
 
 echo_verbose() {
@@ -81,7 +81,7 @@ while read -r line;do
     FILE_DOW=$(date +%w -d "$FILE_DATE")
     FILE_DOM=$(date +%d -d "$FILE_DATE")
     FILE_UNIX=$(date +%s -d "$FILE_DATE")
-    
+
     if [ $((DATE_UNIX-FILE_UNIX)) -lt "$DAILY_DIFF_SEC" ];then
         echo_verbose "File younger than $DAILY days, not touching: $FILE_NAME"
         continue
@@ -91,9 +91,9 @@ while read -r line;do
     elif [ "$FILE_DOM" -eq "$DOM" ] && [ "$MONTHLY_DATE_UNIX" -lt "$FILE_UNIX" ];then
         echo_verbose "File younger than $MONTHLY months and its DOM is $FILE_DOM, not touching: $FILE_NAME"
         continue
-	elif [ $IGNORE -gt 0 ] && [ "$MONTHLY_MAX_UNIX" -gt "$FILE_UNIX" ];then
-		echo_verbose "File older than $IGNORE months, not touching: $FILE_NAME"
-		continue
+    elif [ $IGNORE -gt 0 ] && [ "$MONTHLY_MAX_UNIX" -gt "$FILE_UNIX" ];then
+        echo_verbose "File older than $IGNORE months, not touching: $FILE_NAME"
+        continue
     fi
 
     echo "$FILE_NAME" >> "$LIST_TO_DELETE"
