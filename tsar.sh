@@ -13,10 +13,13 @@ set -u
 # A few configuration options are available below this section.
 #
 # Options:
+# -a   Number of daily backups to keep
 # -d   Dry run. Will show the delete command instead of running it.
 # -k   Tarsnap Key used for writing / deleting backups. Defaults to /root/tarsnap.key.
+# -m   Number of monthly backups to keep
 # -r   Tarsnap Key used for reading list of backups. Defaults to /root/tarsnap.read.key.
 # -v   Verbose output.
+# -w   Number of weekly backups to keep
 #
 
 ###############################################################################
@@ -29,7 +32,7 @@ TARSNAP_DELETE_KEY="/root/tarsnap.key"
 TARSNAP_EXTRA_READ_OPTIONS=""
 TARSNAP_EXTRA_DELETE_OPTIONS=""
 
-# Number of daily, weekly and monthly backups to keep:
+# Default number of daily, weekly and monthly backups to keep (overridden by command line parameters):
 DAILY=30
 WEEKLY=12
 MONTHLY=48
@@ -43,7 +46,7 @@ DOM=1 # Day of the month for monthly
 ###############################################################################
 
 usage() {
-    echo "usage: ${0##*/} [-dv] [-k write-key] [-r readonly-key]" >&2
+    echo "usage: ${0##*/} [-dv] [-k write-key] [-r readonly-key] [-a days] [-w weeks] [-m months]" >&2
     exit 1
 }
 
@@ -54,15 +57,32 @@ echo_verbose() {
 
 DRY=0
 VERBOSE=0
-while getopts "dvr:k:" option;do
+while getopts "dvr:k:a:w:m:" option;do
     case "${option}" in
+	a) DAILY=$OPTARG;;
         d) DRY=1;;
 	k) TARSNAP_DELETE_KEY=$OPTARG;;
+	m) MONTHLY=$OPTARG;;
 	r) TARSNAP_READ_KEY=$OPTARG;;
         v) VERBOSE=1;;
+	w) WEEKLY=$OPTARG;;
         *) usage;;
     esac
 done
+
+if [[ ! $DAILY =~ ^[0-9]+$ ]] ; then
+    echo "Number of daily backups to keep needs to be an integer. $DAILY is not a valid value."
+    echo "Please specify a valid integer with the -a flag"
+    exit 2
+elif [[ ! $WEEKLY =~ ^[0-9]+$ ]] ; then
+    echo "Number of weekly backups to keep needs to be an integer. $WEEKLY is not a valid value."
+    echo "Please specify a valid integer with the -w flag"
+    exit 2
+elif [[ ! $MONTHLY =~ ^[0-9]+$ ]] ; then
+    echo "Number of monthly backups to keep needs to be an integer. $MONTHLY is not a valid value."
+    echo "Please specify a valid integer with the -m flag"
+    exit 2
+fi
 
 if [ ! -e $TARSNAP_READ_KEY ] ; then
     echo "Tarsnap key doesn't exist: $TARSNAP_READ_KEY"

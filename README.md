@@ -13,9 +13,12 @@ Tsar runs the `tarsnap` command twice - once to obtain the list of archives, and
 
 Once configured, Tsar may be executed without any parameters. A couple of flags are available, however:
 ```
+-a <number>            Number of daily backups to keep
 -d                     Dry run. Will show the delete command instead of running it.
 -k <tarsnap-keyfile>   Tarsnap Key used for writing / deleting backups. Defaults to /root/tarsnap.key.
+-m <number>            Number of monthly backups to keep
 -r <tarsnap-keyfile>   Tarsnap Key used for reading list of backups. Defaults to /root/tarsnap.read.key.
 -v                     Verbose output. Will produce commentary to the progress of the script, as well as logic behind keeping the files that need not be deleted.
+-w <number>            Number of weekly backups to keep
 
 ```
