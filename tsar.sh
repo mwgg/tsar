@@ -14,14 +14,20 @@ set -u
 #
 # Options:
 # -d   Dry run. Will show the delete command instead of running it.
+# -k   Tarsnap Key used for writing / deleting backups. Defaults to /root/tarsnap.key.
+# -r   Tarsnap Key used for reading list of backups. Defaults to /root/tarsnap.read.key.
 # -v   Verbose output.
 #
 
 ###############################################################################
 # Configuration:
-# If you are using multiple keys or other specific options, you can specify them here:
-TARSNAP_R="tarsnap -v --list-archives --keyfile /root/tarsnap.read.key" # for getting archive list
-TARSNAP_D="tarsnap -d --keyfile /root/tarsnap.key" # for deleting, archive names will be appended here
+# Default key locations, which can be overridden by command line parameters:
+TARSNAP_READ_KEY="/root/tarsnap.read.key"
+TARSNAP_DELETE_KEY="/root/tarsnap.key"
+
+# If you need extra specific options, you can specify them here:
+TARSNAP_EXTRA_READ_OPTIONS=""
+TARSNAP_EXTRA_DELETE_OPTIONS=""
 
 # Number of daily, weekly and monthly backups to keep:
 DAILY=30
@@ -37,7 +43,7 @@ DOM=1 # Day of the month for monthly
 ###############################################################################
 
 usage() {
-    echo "usage: ${0##*/} [-dv]" >&2
+    echo "usage: ${0##*/} [-dv] [-k write-key] [-r readonly-key]" >&2
     exit 1
 }
 
@@ -48,13 +54,29 @@ echo_verbose() {
 
 DRY=0
 VERBOSE=0
-while getopts "dv" option;do
+while getopts "dvr:k:" option;do
     case "${option}" in
         d) DRY=1;;
+	k) TARSNAP_DELETE_KEY=$OPTARG;;
+	r) TARSNAP_READ_KEY=$OPTARG;;
         v) VERBOSE=1;;
         *) usage;;
     esac
 done
+
+if [ ! -e $TARSNAP_READ_KEY ] ; then
+    echo "Tarsnap key doesn't exist: $TARSNAP_READ_KEY"
+    echo "Please specify a valid key with the -r flag"
+    exit 2
+elif [ ! -e $TARSNAP_DELETE_KEY ] ; then
+    echo "Tarsnap key doesn't exist: $TARSNAP_DELETE_KEY"
+    echo "Please specify a valid key with the -k flag"
+    exit 2
+fi
+
+# The actual commands we use for going to Tarsnap
+TARSNAP_R="tarsnap -v --list-archives --keyfile $TARSNAP_READ_KEY $TARSNAP_EXTRA_READ_OPTIONS" # for getting archive list
+TARSNAP_D="tarsnap -d --keyfile $TARSNAP_DELETE_KEY $TARSNAP_EXTRA_DELETE_OPTIONS" # for deleting, archive names will be appended here
 
 if [ -e /usr/bin/shred ] ; then
     # Standard place Linux has shred
