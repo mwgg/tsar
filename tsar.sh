@@ -43,6 +43,7 @@ usage() {
 
 echo_verbose() {
     [ "$VERBOSE" -eq 1 ] && echo "$@"
+    return 0
 }
 
 DRY=0
@@ -55,6 +56,18 @@ while getopts "dv" option;do
     esac
 done
 
+if [ -e /usr/bin/shred ] ; then
+    # Standard place Linux has shred
+    SHRED="/usr/bin/shred -u"
+elif [ -e /usr/local/bin/gshred ] ; then
+    # If you install GNU CoreUtils from FreeBSD Ports
+    SHRED="/usr/local/bin/gshred -u"
+else
+    # Don't have GNU Coreutils.
+    SHRED="rm -f"
+fi
+
+OSTYPE=$(uname)
 LIST=$(mktemp)
 LIST_TO_DELETE=$(mktemp)
 D_OUTPUT=$(mktemp)
@@ -64,24 +77,36 @@ DATE_UNIX=$(date +%s)
 DATE=$(date +%D)
 DAILY_DIFF_SEC=$((DAILY*86400))
 WEEKLY_DIFF_SEC=$((WEEKLY*604800))
-MONTHLY_DATE_UNIX=$(date +%s -d "$DATE -$MONTHLY months")
 if [ $IGNORE -gt 0 ];then MONTHLY_MAX_UNIX=$(date +%s -d "$DATE -$IGNORE months");fi
+
+if [ "$OSTYPE" = 'FreeBSD' ]; then
+    MONTHLY_DATE_UNIX=$(date -v -"$MONTHLY"m -j +%s)
+else
+    MONTHLY_DATE_UNIX=$(date +%s -d "$DATE -$MONTHLY months")
+fi
 
 echo_verbose "Getting the list of archives from Tarsnap"
 
 if ! $TARSNAP_R > "$LIST";then
     cat "$LIST" # tarsnap finished with an error, show it
-    shred -u "$LIST"
+    $SHRED "$LIST"
     exit 3
 fi
 
 while read -r line;do
     FILE_DATE=$(echo "$line" | awk '{print $2}')
     FILE_NAME=$(echo "$line" | awk '{print $1}')
-    FILE_DOW=$(date +%w -d "$FILE_DATE")
-    FILE_DOM=$(date +%d -d "$FILE_DATE")
-    FILE_UNIX=$(date +%s -d "$FILE_DATE")
-
+    
+    if [ "$OSTYPE" = 'FreeBSD' ]; then
+	FILE_DOW=$(date -j -f "%F" "$FILE_DATE" +%w)
+	FILE_DOM=$(date -j -f "%F" "$FILE_DATE" +%d)
+	FILE_UNIX=$(date -j -f "%F" "$FILE_DATE" +%s)
+    else
+	FILE_DOW=$(date +%w -d "$FILE_DATE")
+	FILE_DOM=$(date +%d -d "$FILE_DATE")
+	FILE_UNIX=$(date +%s -d "$FILE_DATE")
+    fi
+    
     if [ $((DATE_UNIX-FILE_UNIX)) -lt "$DAILY_DIFF_SEC" ];then
         echo_verbose "File younger than $DAILY days, not touching: $FILE_NAME"
         continue
@@ -97,7 +122,7 @@ while read -r line;do
     fi
 
     echo "$FILE_NAME" >> "$LIST_TO_DELETE"
-    ((FILES_TO_DELETE++))
+    ((++FILES_TO_DELETE))
 done < "$LIST"
 
 echo_verbose "Total number of $FILES_TO_DELETE files can be deleted."
@@ -125,6 +150,6 @@ else
 fi
 
 echo_verbose "Getting rid of temporary files."
-shred -u "$LIST" "$LIST_TO_DELETE" "$D_OUTPUT"
+$SHRED "$LIST" "$LIST_TO_DELETE" "$D_OUTPUT"
 echo_verbose "Done."
 exit $EXIT_CODE
